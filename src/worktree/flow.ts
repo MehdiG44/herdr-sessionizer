@@ -15,7 +15,6 @@ import type {
 import {
   WORKTREE_CANDIDATE_ROW_DELIMITER,
   discoverWorktreeCandidates,
-  fetchPullRequestHead,
   pullRequestWorkspaceLabel,
   worktreeCandidateFromRow,
   worktreeCandidateRow,
