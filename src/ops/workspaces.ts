@@ -47,7 +47,14 @@ export class Workspaces {
     await this.herdr.run(["workspace", "focus", workspaceId]);
   }
 
-  async close(workspaceId: string): Promise<void> {
-    await this.herdr.run(["workspace", "close", workspaceId]);
+  async close(
+    workspaceId: string,
+    options?: { group?: boolean }
+  ): Promise<void> {
+    const args = ["workspace", "close", workspaceId];
+    // A parent/main workspace of a repo that has open worktrees must be closed
+    // with --group; a single close refuses with workspace_group_close_required.
+    if (options?.group) args.push("--group");
+    await this.herdr.run(args);
   }
 }

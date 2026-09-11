@@ -1,4 +1,5 @@
 import { Herdr } from "../client/herdr.ts";
+import type { Workspace } from "../client/types.ts";
 import { Workspaces } from "../ops/workspaces.ts";
 import { Worktrees } from "../ops/worktrees.ts";
 import type { PickOptions } from "../ui/fzf.ts";
@@ -18,14 +19,17 @@ export type CloseMode = "close" | "remove";
 const CLOSE_MODE_DELIMITER = "\t";
 
 const CLOSE_MODES = [
-  { mode: "close", label: "Close workspace (keep worktrees)" },
-  { mode: "remove", label: "Remove worktrees (destructive)" },
+  { mode: "close", label: "Close workspace" },
+  { mode: "remove", label: "Remove worktrees" },
 ] as const;
 
 export interface CloseRuntime {
   workspaces: Pick<Workspaces, "list">;
-  /** Close a workspace session, leaving any git worktree checkout intact. */
-  close: (workspaceId: string) => Promise<void>;
+  /**
+   * Close a workspace session, leaving any git worktree checkout intact.
+   * Pass `group: true` to close a parent workspace plus all its worktrees.
+   */
+  close: (workspaceId: string, options?: { group?: boolean }) => Promise<void>;
   /** Close a workspace and delete its git worktree checkout. */
   remove: (workspaceId: string) => Promise<void>;
   pickRows: (
@@ -52,12 +56,16 @@ export async function runClosePicker(
   // workspace of a repo that has worktrees also carries `worktree` provenance,
   // but `is_linked_worktree` is false there — filtering on the boolean would
   // list the parent repo and make `worktree remove` a no-op on it.
-  const rows = (
+  const candidates =
     selectedMode === "remove"
       ? workspaces.filter(
           (workspace) => workspace.worktree?.is_linked_worktree === true
         )
-      : workspaces
+      : workspaces;
+  // Group rows by repo so worktrees of the same repo sit together in the
+  // picker (fzf keeps input order until a query re-sorts by score).
+  const rows = [...candidates].sort((a, b) =>
+    (a.worktree?.repo_name ?? "").localeCompare(b.worktree?.repo_name ?? "")
   ).map(workspaceRow);
 
   if (rows.length === 0) {
@@ -89,14 +97,49 @@ export async function runClosePicker(
   const verb = selectedMode === "remove" ? "removed" : "closed";
   const summaryVerb = selectedMode === "remove" ? "Removed" : "Closed";
   const noun = selectedMode === "remove" ? "worktree(s)" : "workspace(s)";
-  const action = selectedMode === "remove" ? runtime.remove : runtime.close;
   let succeeded = 0;
   let failed = 0;
 
+  const workspaceById = new Map<string, Workspace>(
+    workspaces.map((workspace) => [workspace.workspace_id, workspace])
+  );
+  // In close mode, a parent/main workspace (a repo that has open worktrees)
+  // must be closed with --group. A group close also closes that repo's child
+  // worktrees, so a child selected alongside its parent is redundant — skip it.
+  const parentRepos = new Set<string>();
+  if (selectedMode === "close") {
+    for (const row of selected) {
+      const workspace = workspaceById.get(extractWorkspaceId(row));
+      if (
+        workspace?.worktree?.is_linked_worktree === false &&
+        workspace.worktree.repo_name
+      ) {
+        parentRepos.add(workspace.worktree.repo_name);
+      }
+    }
+  }
+
   for (const row of selected) {
     const id = extractWorkspaceId(row);
+    const workspace = workspaceById.get(id);
+    const isChild = workspace?.worktree?.is_linked_worktree === true;
+    const isParent = workspace?.worktree?.is_linked_worktree === false;
+    const repo = workspace?.worktree?.repo_name;
+
+    if (selectedMode === "close" && isChild && repo && parentRepos.has(repo)) {
+      runtime.logger.log(`✓ ${verb} ${id} (covered by group close)`);
+      succeeded += 1;
+      continue;
+    }
+
     try {
-      await action(id);
+      if (selectedMode === "remove") {
+        await runtime.remove(id);
+      } else if (isParent) {
+        await runtime.close(id, { group: true });
+      } else {
+        await runtime.close(id);
+      }
       succeeded += 1;
       runtime.logger.log(`✓ ${verb} ${id}`);
     } catch (error) {
@@ -134,7 +177,7 @@ function createRuntime(): CloseRuntime {
 
   return {
     workspaces,
-    close: (workspaceId) => workspaces.close(workspaceId),
+    close: (workspaceId, options) => workspaces.close(workspaceId, options),
     remove: (workspaceId) => worktrees.remove(workspaceId),
     pickRows: pick,
     logger: console,

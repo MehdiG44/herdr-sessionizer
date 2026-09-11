@@ -19,7 +19,16 @@ export const WORKSPACE_ROW_DELIMITER = "\t";
  *   {9} panes       workspace.pane_count
  */
 export function workspaceRow(workspace: Workspace): string {
-  const label = rowField(workspace.label || workspaceName(workspace));
+  const baseLabel = rowField(workspace.label || workspaceName(workspace));
+  // Linked worktree checkouts are shown as "repo / label" so the user can
+  // tell which repo a worktree belongs to at a glance.
+  const linkedRepoName =
+    workspace.worktree?.is_linked_worktree === true
+      ? workspace.worktree.repo_name
+      : undefined;
+  const label = linkedRepoName
+    ? rowField(`${linkedRepoName} / ${baseLabel}`)
+    : baseLabel;
   const summary = rowField(workspaceSummary(workspace));
   const cwd = rowField(workspacePath(workspace));
   const branch = rowField(workspace.worktree?.branch);

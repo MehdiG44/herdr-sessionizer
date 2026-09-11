@@ -124,6 +124,33 @@ describe("runClosePicker", () => {
     expect(rows?.[0]).toContain("ws-worktree");
   });
 
+  it("sorts rows by repo so same-repo worktrees group together", async () => {
+    const pickRows = mock(
+      async (_rows: readonly string[], _options?: PickOptions) => null
+    );
+
+    await runClosePicker(
+      "remove",
+      testRuntime({
+        workspaces: {
+          list: mock(async () => [
+            worktreeWorkspace(), // repo "repo"
+            {
+              ...worktreeWorkspace(),
+              workspace_id: "ws-alpha",
+              worktree: { repo_name: "alpha", is_linked_worktree: true },
+            },
+          ]),
+        },
+        pickRows,
+      })
+    );
+
+    const rows = pickRows.mock.calls[0]?.[0];
+    expect(rows?.[0]).toContain("ws-alpha"); // "alpha" sorts before "repo"
+    expect(rows?.[1]).toContain("ws-worktree");
+  });
+
   it("closes a single selected workspace and logs a summary", async () => {
     const close = mock(async (_workspaceId: string) => {});
     const log = mock(() => {});
@@ -145,6 +172,91 @@ describe("runClosePicker", () => {
     expect(close).toHaveBeenCalledWith("ws-worktree");
     expect(log).toHaveBeenCalledWith("✓ closed ws-worktree");
     expect(log).toHaveBeenCalledWith("Closed 1 workspace(s), 0 failed.");
+  });
+
+  it("closes a parent workspace with --group", async () => {
+    const close = mock(
+      async (_workspaceId: string, _options?: { group?: boolean }) => {}
+    );
+    const log = mock(() => {});
+    const pickRows = mock(async (rows: readonly string[]) => [rows[0]!]);
+
+    await runClosePicker(
+      "close",
+      testRuntime({
+        workspaces: {
+          list: mock(async () => [
+            {
+              workspace_id: "ws-parent",
+              label: "repo",
+              cwd: "/repo",
+              worktree: {
+                repo_name: "repo",
+                checkout_path: "/repo",
+                is_linked_worktree: false,
+              },
+            },
+          ]),
+        },
+        close,
+        pickRows,
+        logger: { log, error: mock(() => {}) },
+        exit: (code) => {
+          throw new Error(`unexpected exit ${code}`);
+        },
+      })
+    );
+
+    expect(close).toHaveBeenCalledWith("ws-parent", { group: true });
+    expect(log).toHaveBeenCalledWith("✓ closed ws-parent");
+    expect(log).toHaveBeenCalledWith("Closed 1 workspace(s), 0 failed.");
+  });
+
+  it("skips a child worktree covered by a selected parent's group close", async () => {
+    const close = mock(
+      async (_workspaceId: string, _options?: { group?: boolean }) => {}
+    );
+    const log = mock(() => {});
+    const pickRows = mock(async (rows: readonly string[]) => [
+      rows[0]!,
+      rows[1]!,
+    ]);
+
+    await runClosePicker(
+      "close",
+      testRuntime({
+        workspaces: {
+          list: mock(async () => [
+            worktreeWorkspace(), // child, repo "repo"
+            {
+              workspace_id: "ws-parent",
+              label: "repo",
+              cwd: "/repo",
+              worktree: {
+                repo_name: "repo",
+                checkout_path: "/repo",
+                is_linked_worktree: false,
+              },
+            },
+          ]),
+        },
+        close,
+        pickRows,
+        logger: { log, error: mock(() => {}) },
+        exit: (code) => {
+          throw new Error(`unexpected exit ${code}`);
+        },
+      })
+    );
+
+    // The child is covered by the parent's group close — only the parent runs.
+    expect(close).toHaveBeenCalledTimes(1);
+    expect(close).toHaveBeenCalledWith("ws-parent", { group: true });
+    expect(log).toHaveBeenCalledWith(
+      "✓ closed ws-worktree (covered by group close)"
+    );
+    expect(log).toHaveBeenCalledWith("✓ closed ws-parent");
+    expect(log).toHaveBeenCalledWith("Closed 2 workspace(s), 0 failed.");
   });
 
   it("passes multi-select and close preview options in close mode", async () => {

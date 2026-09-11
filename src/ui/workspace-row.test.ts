@@ -33,7 +33,7 @@ describe("workspaceRow", () => {
 
     expect(row.split(WORKSPACE_ROW_DELIMITER)).toEqual([
       "ws-feature",
-      "feature/test-flow",
+      "repo / feature/test-flow",
       "feature/test-flow · feature-test-flow",
       "/worktrees/repo/feature-test-flow",
       "feature/test-flow",
