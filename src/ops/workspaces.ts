@@ -46,4 +46,8 @@ export class Workspaces {
   async focus(workspaceId: string): Promise<void> {
     await this.herdr.run(["workspace", "focus", workspaceId]);
   }
+
+  async close(workspaceId: string): Promise<void> {
+    await this.herdr.run(["workspace", "close", workspaceId]);
+  }
 }
