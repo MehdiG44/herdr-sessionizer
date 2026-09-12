@@ -35,7 +35,7 @@ brew install fzf
 
 Optional: [bat](https://github.com/sharkdp/bat) for richer `README.md` previews (`brew install bat`).
 
-Optional: [`gh`](https://cli.github.com/) to list open GitHub PRs in the worktree picker (`brew install gh && gh auth login`).
+Optional: [`gh`](https://cli.github.com/) to list open GitHub PRs in the worktree picker (`brew install gh && gh auth login`) — opt in with `[worktree].github_prs = true`.
 
 ## Setup
 
@@ -125,7 +125,9 @@ Worktree (always starts at repo picker)
 
 ### Open pull requests
 
-Open PRs appear when [`gh`](https://cli.github.com/) is installed and authenticated. Drafts and fork heads are included; rows may show `[draft]` or `[fork]`. If `gh` is missing or fails, those rows are omitted and the rest of the picker is unchanged.
+Open PRs appear in the worktree picker only when you **opt in** with `[worktree].github_prs = true` (default `false`). When enabled, open PRs (including drafts and fork heads) are listed via [`gh`](https://cli.github.com/); rows may show `[draft]` or `[fork]`. If `gh` is missing, unauthenticated, or fails, those rows are omitted and the rest of the picker is unchanged.
+
+When disabled (the default, or the key is absent), the worktree picker skips the `gh pr list` call entirely — no `gh` spawn, no PR rows, git-only flow unchanged. Configs created before this feature default to `false`, so set `github_prs = true` to restore PR candidates after upgrading.
 
 The git branch is always `pr-<n>`. The Herdr workspace is named `pr-<n>-<short-title>` so it is recognizable (e.g. `pr-29-fix_worktree_gate`). `git pull` inside the worktree tracks the live PR head, including pushes from fork contributors.
 
@@ -167,7 +169,7 @@ When Sessionizer **creates** a new project or worktree workspace, or **opens** a
 
 Created automatically on first run if missing.
 
-`[ui]`, `[layout]`, and `[tabs]` are optional. A config with only `[projects]` is
+`[ui]`, `[worktree]`, `[layout]`, and `[tabs]` are optional. A config with only `[projects]` is
 valid: new workspaces then open with a plain shell and no layout is applied.
 When `[tabs]` sections exist, `[layout].focus` is required.
 
@@ -188,6 +190,9 @@ depth = 1
 
 [ui]
 placement = "overlay"   # overlay | split | popup (popup needs Herdr >= 0.7.4)
+
+[worktree]
+github_prs = false   # true: list open GitHub PRs as worktree candidates (needs gh + auth)
 
 [layout]
 focus = "editor"

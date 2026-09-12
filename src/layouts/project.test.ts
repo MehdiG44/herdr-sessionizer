@@ -13,6 +13,7 @@ function testConfig(overrides?: Partial<SessionizerConfig>): SessionizerConfig {
     projects: { roots: ["/tmp"], git_only: false, depth: 1 },
     ui: { placement: "overlay" },
     layout: { focus: "assistant" },
+    worktree: { github_prs: false },
     tabs: [
       {
         id: "terminal",
