@@ -15,7 +15,6 @@ import type {
 import {
   WORKTREE_CANDIDATE_ROW_DELIMITER,
   discoverWorktreeCandidates,
-  fetchPullRequestHead,
   pullRequestWorkspaceLabel,
   worktreeCandidateFromRow,
   worktreeCandidateRow,
@@ -220,6 +219,7 @@ async function resolveInteractiveIntent(
     project,
     repoWorkspaceId,
     workspaces,
+    githubPrs: runtime.config.worktree.github_prs,
   });
   if (candidates.length > 0) {
     const rows = candidates.map(worktreeCandidateRow);

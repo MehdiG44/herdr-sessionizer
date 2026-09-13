@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.8.2] - 2026-09-13
+
+### Added
+
+- `[worktree].github_prs` opt-in toggle (default `false`) for GitHub PR candidates in the worktree picker. Set `true` to list open PRs via [`gh`](https://cli.github.com/); when off or absent, the picker skips the `gh pr list` call entirely — no `gh` spawn, no PR rows, git-only flow unchanged ([#52](https://github.com/andrewchng/herdr-sessionizer/issues/52)).
+
+### Changed
+
+- Worktree PR candidates are now off by default: configs created before this feature lack the key, so they default to `false` and PR rows disappear after upgrade. Set `[worktree].github_prs = true` to restore PR candidates.
+
 ## [0.8.1] - 2026-08-29
 
 ### Changed
