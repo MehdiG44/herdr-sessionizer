@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.8.3] - 2026-09-15
+
+### Changed
+
+- Generated default `config.toml` now seeds `[ui].placement = "popup"` with `width` / `height` = `"100%"` (previously `overlay`), so the picker fills the workspace. Since Herdr `0.9` overlay only covers a single pane, first-time users get a full-screen picker instead ([#56](https://github.com/andrewchng/herdr-sessionizer/issues/56)). Existing configs keep their placement and can switch to `popup` at `100%` manually.
+
 ## [0.8.2] - 2026-09-13
 
 ### Added
