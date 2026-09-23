@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.8.4] - 2026-09-23
+
+### Changed
+
+- The build script now re-signs `dist/sessionizer` with a fresh adhoc signature on macOS after compiling (`codesign --force --deep --sign - --timestamp=none`). Bun's `--compile` emits a linker-signed adhoc signature (`flags=0x20002`) that newer macOS builds (26.5+/27) reject with SIGKILL / "Code Signature Invalid", killing the plugin binary on launch — even `--help`. Re-signing produces `flags=0x2(adhoc)` that macOS accepts, so plugin actions/panes launch reliably ([#64](https://github.com/andrewchng/herdr-sessionizer/issues/64)). The step is macOS-only and a no-op on Linux.
+
 ## [0.8.3] - 2026-09-15
 
 ### Changed
