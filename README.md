@@ -403,6 +403,8 @@ bun run sessionizer    # dev: run Sessionizer flow via Bun without compiling
 ./dist/sessionizer --help
 ```
 
+On macOS, `bun run build` also re-signs `dist/sessionizer` with a fresh adhoc signature after compiling (`codesign --force --deep --sign - --timestamp=none`). Bun's linker-signed adhoc signature can be rejected by newer macOS builds (SIGKILL / "Code Signature Invalid"), so re-signing makes the host-local binary launch reliably. This step is macOS-only and a no-op on Linux.
+
 `bun run test` runs the unit suite only; `bun run test:integration` runs the real-git sandbox tests for `fetchPullRequestHead` (a tmpdir fake GitHub, no network). The integration suite is excluded from `bun test` and CI runs both — the pre-commit hook exports `GIT_DIR`, which would redirect the sandbox's git commands into the parent repository, so the sandbox suite only ever runs in CI's clean environment.
 
 Create the release-prep branch from updated `main` (after the feature PRs merge) — never from a feature branch, or the release PR diff will include the whole feature. Use `bun run release -- <version>` on the release-prep branch to update version files, then run `bun run release:tag -- <version>` from merged `main` to create and push the annotated `v<version>` release tag.
